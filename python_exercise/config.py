@@ -9,4 +9,4 @@ from os import getenv
 # .. envvar:: TABLE_NAME
 #     A string specifying the name of the DynamoDB table to use
 #     The table should exist in the specified deployment environment
-TABLE_NAME = getenv("DYNAMODB_TABLE", "python-exercise")
+TABLE_NAME = getenv("DYNAMODB_TABLE", "python-exercise-ssen-Database-YZKEI9P379EO")

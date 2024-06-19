@@ -6,7 +6,7 @@ name = "repo.evertz.io"
 [packages]
 requests = "==2.32.2"
 boto3 = "==1.26.82"
-evertz-io-identity-lib = "==4.0.0"
+evertz-io-identity-lib = "~=4.1"
 evertz-io-observability = "==8.0.0"
 evertz-io-python-lambda-types = "==0.1.11"
 aws-lambda-powertools = "==2.22.0"
