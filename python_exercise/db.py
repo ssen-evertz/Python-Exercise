@@ -128,3 +128,56 @@ class Db:
             raise ItemNotFound(item_type.value, tenant_id, item_id)
 
         return response.get("Item").get("data")
+
+    @staticmethod
+    @start_span("database_update_item")
+    def update_item(item_type: ItemType, tenant_id: str, item_id: str, item_data: Mapping[str, Any]):
+        """
+        Update existing item information in database
+        :param item_type: One of the types from ItemType
+        :param tenant_id: item tenant
+        :param item_id: item id
+        :param item_data: data to update in the item
+        """
+
+        logger.info(f"Updating item in DB for item [{item_id}] for tenant [{tenant_id}]")
+        keys: ItemKeys = ItemKeys.get_keys(item_type, tenant_id, item_id)
+        item = {PK_KEY: keys.primary, ITEM_ID_ATTRIBUTE: item_id}
+
+        if item_data:
+            item[DATA_ATTRIBUTE] = item_data
+        kwargs = {"Item": item, "ConditionExpression": Attr(PK_KEY).exists()}
+        try:
+            restricted_table(TABLE_NAME, tenant_id).put_item(**kwargs)
+        except ClientError as client_error:
+            error = client_error.response.get("Error", {})
+            error_code = error.get("Code", "")
+            logger.error(f"Error Code: [{error_code}]")
+
+            if error_code == "ConditionalCheckFailedException":
+                raise ItemNotFound(item_type.value, tenant_id, item_id) from client_error
+            raise
+
+    @staticmethod
+    @start_span("database_delete_item")
+    def delete_item(item_type: ItemType, tenant_id: str, item_id: str) -> dict[str, Any]:
+        """
+        Delete item of the given type from database
+        :param item_type: One of the types from ItemType
+        :param tenant_id: item tenant
+        :param item_id: item id
+        :return: item's data
+        """
+        logger.info(f"Deleting {item_type.value} [{item_id}] from DB for tenant: [{tenant_id}]")
+
+        keys: ItemKeys = ItemKeys.get_keys(item_type, tenant_id, item_id)
+        kwargs: dict[str, Any] = {"Key": {PK_KEY: keys.primary}, "ConditionExpression": Attr(PK_KEY).exists()}
+
+        try:
+            restricted_table(TABLE_NAME, tenant_id).delete_item(**kwargs)
+        except ClientError as client_error:
+            error = client_error.response.get("Error", {})
+            error_code = error.get("Code", "")
+
+            if error_code == "ConditionalCheckFailedException":
+                raise ItemNotFound(item_type.value, tenant_id, item_id) from client_error
